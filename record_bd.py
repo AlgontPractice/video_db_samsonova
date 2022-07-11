@@ -1,9 +1,30 @@
+import string
+
+from flask import Flask
+
+from flask_jsonrpc import JSONRPC
+
 import psycopg2
 from psycopg2 import pool
+import datetime
 
-def insert_record(channel, record_type, record, record_path, datetime_start, datetime_stop, record_length,
-                  record_extension, snapshot_path):
-    global postgresql_pool
+app = Flask('db_record')
+
+# Flask-JSONRPC
+jsonrpc = JSONRPC(app, '/api_db_record', enable_web_browsable_api=True)
+
+
+@jsonrpc.method('index')
+def index() -> str:
+    return 'Welcome to Flask JSON-RPC'
+
+
+#сменить тип данных для дат
+@jsonrpc.method('insert_record')
+def insert_record(channel: int, record_type: string, record1: int, record_path: string, datetime_start: string, datetime_stop: string, record_length: float,
+                  record_extension: string, snapshot_path: string):
+    global postgresql_pool, cur
+    cur = None
     try:
         postgresql_pool = psycopg2.pool.ThreadedConnectionPool(1, 20,
                                                                database="Record_bd",
@@ -18,20 +39,25 @@ def insert_record(channel, record_type, record, record_path, datetime_start, dat
             sql = "INSERT INTO record_info (id_channel, record_type, id_record, record_path, datetime_start, " \
                   "datetime_stop, record_length, record_extension, snapshot_path) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) "
             try:
-                cur.execute(sql, (channel, record_type, record, record_path, datetime_start, datetime_stop, record_length, record_extension, snapshot_path))
+                cur.execute(sql, (
+                    channel, record_type, record1, record_path, datetime_start, datetime_stop, record_length,
+                    record_extension, snapshot_path))
             except psycopg2.DatabaseError as err:
                 print("Error: ", err)
             finally:
                 con.commit()
-            cur.close()
     except (Exception, psycopg2.DatabaseError) as error:
         print("Error", error)
     finally:
+        cur.close()
         if postgresql_pool:
             postgresql_pool.closeall()
 
-def select_record(dt_start, dt_stop):
-    global record, postgresql_pool
+
+@jsonrpc.method('select_record')
+def select_record(dt_start: string, dt_stop: string):
+    global record, postgresql_pool, cur
+    cur = None
     try:
         postgresql_pool = psycopg2.pool.ThreadedConnectionPool(1, 20,
                                                                database="Record_bd",
@@ -47,16 +73,18 @@ def select_record(dt_start, dt_stop):
             try:
                 cur.execute(sql, (dt_start, dt_stop))
                 record = cur.fetchall()  # возвращает все строки
-                print(record)
             except psycopg2.DatabaseError as err:
                 print("Error: ", err)
             finally:
-                con.commit()
-            cur.close()
-            if record is not None:
-                return record
+                if record is not None:
+                    return record
     except (Exception, psycopg2.DatabaseError) as error:
         print("Error", error)
     finally:
+        cur.close()
         if postgresql_pool:
             postgresql_pool.closeall()
+
+
+if __name__ == '__main__':
+    app.run(port=1234, host='127.0.0.1')
