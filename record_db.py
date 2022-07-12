@@ -1,12 +1,8 @@
-import string
-
 from flask import Flask
-
 from flask_jsonrpc import JSONRPC
-
 import psycopg2
+import psycopg2.extras
 from psycopg2 import pool
-import datetime
 
 app = Flask('db_record')
 
@@ -14,18 +10,15 @@ app = Flask('db_record')
 jsonrpc = JSONRPC(app, '/api_db_record', enable_web_browsable_api=True)
 
 
-@jsonrpc.method('index')
-def index() -> str:
-    return 'Welcome to Flask JSON-RPC'
+@jsonrpc.method('echo')
+def echo(message: str) -> str:
+    return message
 
 
 @jsonrpc.method('insert_record')
-def insert_record(channel: int, record_type: string, record1: int, record_path: string, datetime_start: string, datetime_stop: string, record_length: float,
-                  record_extension: string, snapshot_path: string):
+def insert_record(channel: int, record_type: str, record1: int, record_path: str, datetime_start: str, datetime_stop: str, record_length: float,
+                  record_extension: str, snapshot_path: str):
 
-    #преобразование сторокового формата в datetime
-    dt_start = datetime.datetime.strptime(datetime_start, '%Y-%m-%d %H:%M:%S.%f')
-    dt_stop = datetime.datetime.strptime(datetime_stop, '%Y-%m-%d %H:%M:%S.%f')
     global postgresql_pool, cur
     cur = None
     try:
@@ -43,7 +36,7 @@ def insert_record(channel: int, record_type: string, record1: int, record_path: 
                   "datetime_stop, record_length, record_extension, snapshot_path) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) "
             try:
                 cur.execute(sql, (
-                    channel, record_type, record1, record_path, dt_start, dt_stop, record_length,
+                    channel, record_type, record1, record_path, datetime_start, datetime_stop, record_length,
                     record_extension, snapshot_path))
             except psycopg2.DatabaseError as err:
                 print("Error: ", err)
@@ -58,14 +51,11 @@ def insert_record(channel: int, record_type: string, record1: int, record_path: 
 
 
 @jsonrpc.method('select_record')
-def select_record(datetime_start: string, datetime_stop: string):
-
-    #преобразование сторокового формата в datetime
-    dt_start = datetime.datetime.strptime(datetime_start, '%Y-%m-%d %H:%M:%S.%f')
-    dt_stop = datetime.datetime.strptime(datetime_stop, '%Y-%m-%d %H:%M:%S.%f')
+def select_record(datetime_start: str, datetime_stop: str) -> list:
 
     global record, postgresql_pool, cur
     cur = None
+    record = None
     try:
         postgresql_pool = psycopg2.pool.ThreadedConnectionPool(1, 20,
                                                                database="Record_bd",
@@ -76,11 +66,16 @@ def select_record(datetime_start: string, datetime_stop: string):
                                                                )
         con = postgresql_pool.getconn()
         if con:
-            cur = con.cursor()
+            cur = con.cursor(cursor_factory=psycopg2.extras.DictCursor)
             sql = "SELECT * FROM record_info WHERE datetime_start > %s AND datetime_stop < %s"
             try:
-                cur.execute(sql, (dt_start, dt_stop))
-                record = cur.fetchall()  # возвращает все строки
+                cur.execute(sql, (datetime_start, datetime_stop))
+                record = []
+                for row in cur:
+                    t = dict(row)
+                    t['datetime_start'] = str(t['datetime_start'])
+                    t['datetime_stop'] = str(t['datetime_stop'])
+                    record.append(t)
             except psycopg2.DatabaseError as err:
                 print("Error: ", err)
             finally:
@@ -95,4 +90,4 @@ def select_record(datetime_start: string, datetime_stop: string):
 
 
 if __name__ == '__main__':
-    app.run(port=1234, host='127.0.0.1')
+    app.run(port=1234, host='0.0.0.0')
