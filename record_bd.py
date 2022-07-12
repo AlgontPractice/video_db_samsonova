@@ -19,10 +19,13 @@ def index() -> str:
     return 'Welcome to Flask JSON-RPC'
 
 
-#сменить тип данных для дат
 @jsonrpc.method('insert_record')
 def insert_record(channel: int, record_type: string, record1: int, record_path: string, datetime_start: string, datetime_stop: string, record_length: float,
                   record_extension: string, snapshot_path: string):
+
+    #преобразование сторокового формата в datetime
+    dt_start = datetime.datetime.strptime(datetime_start, '%Y-%m-%d %H:%M:%S.%f')
+    dt_stop = datetime.datetime.strptime(datetime_stop, '%Y-%m-%d %H:%M:%S.%f')
     global postgresql_pool, cur
     cur = None
     try:
@@ -40,7 +43,7 @@ def insert_record(channel: int, record_type: string, record1: int, record_path: 
                   "datetime_stop, record_length, record_extension, snapshot_path) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) "
             try:
                 cur.execute(sql, (
-                    channel, record_type, record1, record_path, datetime_start, datetime_stop, record_length,
+                    channel, record_type, record1, record_path, dt_start, dt_stop, record_length,
                     record_extension, snapshot_path))
             except psycopg2.DatabaseError as err:
                 print("Error: ", err)
@@ -55,7 +58,12 @@ def insert_record(channel: int, record_type: string, record1: int, record_path: 
 
 
 @jsonrpc.method('select_record')
-def select_record(dt_start: string, dt_stop: string):
+def select_record(datetime_start: string, datetime_stop: string):
+
+    #преобразование сторокового формата в datetime
+    dt_start = datetime.datetime.strptime(datetime_start, '%Y-%m-%d %H:%M:%S.%f')
+    dt_stop = datetime.datetime.strptime(datetime_stop, '%Y-%m-%d %H:%M:%S.%f')
+
     global record, postgresql_pool, cur
     cur = None
     try:
