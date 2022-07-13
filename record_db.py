@@ -16,7 +16,7 @@ def echo(message: str) -> str:
 
 
 @jsonrpc.method('insert_record')
-def insert_record(channel: int, record_type: str, record1: int, record_path: str, datetime_start: str, datetime_stop: str, record_length: float,
+def insert_record(channel: int, record_type: str, id_record: str, record_path: str, datetime_start: str, datetime_stop: str, record_length: float,
                   record_extension: str, snapshot_path: str):
 
     global postgresql_pool, cur
@@ -36,7 +36,7 @@ def insert_record(channel: int, record_type: str, record1: int, record_path: str
                   "datetime_stop, record_length, record_extension, snapshot_path) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) "
             try:
                 cur.execute(sql, (
-                    channel, record_type, record1, record_path, datetime_start, datetime_stop, record_length,
+                    channel, record_type, id_record, record_path, datetime_start, datetime_stop, record_length,
                     record_extension, snapshot_path))
             except psycopg2.DatabaseError as err:
                 print("Error: ", err)
@@ -73,8 +73,8 @@ def select_record(datetime_start: str, datetime_stop: str) -> list:
                 record = []
                 for row in cur:
                     t = dict(row)
-                    t['datetime_start'] = str(t['datetime_start'])
-                    t['datetime_stop'] = str(t['datetime_stop'])
+                    t['datetime_start'] = str(t['datetime_start']).partition('.')[0]
+                    t['datetime_stop'] = str(t['datetime_stop']).partition('.')[0]
                     record.append(t)
             except psycopg2.DatabaseError as err:
                 print("Error: ", err)
