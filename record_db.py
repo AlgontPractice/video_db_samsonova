@@ -2,7 +2,6 @@ from flask import Flask
 from flask_jsonrpc import JSONRPC
 import psycopg2
 import psycopg2.extras
-from psycopg2 import pool
 
 app = Flask('db_record')
 
@@ -62,7 +61,6 @@ def select_record(datetime_start: str, datetime_stop: str) -> list:
                                                                host="localhost",
                                                                port="5432"
                                                                )
-        #con = postgresql_pool.getconn()
         if con:
             cur = con.cursor(cursor_factory=psycopg2.extras.DictCursor)
             sql = "SELECT * FROM record_info WHERE datetime_start > %s AND datetime_stop < %s AND record_length > %s"
