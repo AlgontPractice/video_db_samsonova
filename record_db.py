@@ -19,17 +19,16 @@ def echo(message: str) -> str:
 def insert_record(channel: int, record_type: str, id_record: str, record_path: str, datetime_start: str, datetime_stop: str, record_length: float,
                   record_extension: str, snapshot_path: str):
 
-    global postgresql_pool, cur
+    global con, cur
     cur = None
     try:
-        postgresql_pool = psycopg2.pool.ThreadedConnectionPool(1, 20,
+        con = psycopg2.connect(
                                                                database="Record_bd",
                                                                user="postgres",
                                                                password="12345",
                                                                host="localhost",
                                                                port="5432"
                                                                )
-        con = postgresql_pool.getconn()
         if con:
             cur = con.cursor()
             sql = "INSERT INTO record_info (id_channel, record_type, id_record, record_path, datetime_start, " \
@@ -46,30 +45,29 @@ def insert_record(channel: int, record_type: str, id_record: str, record_path: s
         print("Error", error)
     finally:
         cur.close()
-        if postgresql_pool:
-            postgresql_pool.closeall()
+        con.close()
 
 
 @jsonrpc.method('select_record')
 def select_record(datetime_start: str, datetime_stop: str) -> list:
 
-    global record, postgresql_pool, cur
+    global record, con, cur
     cur = None
     record = None
     try:
-        postgresql_pool = psycopg2.pool.ThreadedConnectionPool(1, 20,
+        con = psycopg2.connect(
                                                                database="Record_bd",
                                                                user="postgres",
                                                                password="12345",
                                                                host="localhost",
                                                                port="5432"
                                                                )
-        con = postgresql_pool.getconn()
+        #con = postgresql_pool.getconn()
         if con:
             cur = con.cursor(cursor_factory=psycopg2.extras.DictCursor)
-            sql = "SELECT * FROM record_info WHERE datetime_start > %s AND datetime_stop < %s and record_length > 0"
+            sql = "SELECT * FROM record_info WHERE datetime_start > %s AND datetime_stop < %s AND record_length > %s"
             try:
-                cur.execute(sql, (datetime_start, datetime_stop))
+                cur.execute(sql, (datetime_start, datetime_stop,0))
                 record = []
                 for row in cur:
                     t = dict(row)
@@ -85,8 +83,7 @@ def select_record(datetime_start: str, datetime_stop: str) -> list:
         print("Error", error)
     finally:
         cur.close()
-        if postgresql_pool:
-            postgresql_pool.closeall()
+        con.close()
 
 
 if __name__ == '__main__':
