@@ -67,7 +67,7 @@ def select_record(datetime_start: str, datetime_stop: str) -> list:
         con = postgresql_pool.getconn()
         if con:
             cur = con.cursor(cursor_factory=psycopg2.extras.DictCursor)
-            sql = "SELECT * FROM record_info WHERE datetime_start > %s AND datetime_stop < %s"
+            sql = "SELECT * FROM record_info WHERE datetime_start > %s AND datetime_stop < %s and record_length > 0"
             try:
                 cur.execute(sql, (datetime_start, datetime_stop))
                 record = []
