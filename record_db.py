@@ -85,4 +85,4 @@ def select_record(datetime_start: str, datetime_stop: str) -> list:
 
 
 if __name__ == '__main__':
-    app.run(port=1234, host='0.       0.0.0')
+    app.run(port=1234, host='0.0.0.0')
